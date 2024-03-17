@@ -4,28 +4,27 @@
 
 int currentSecond;
 int epochFrame;
+int tick = 0;
+int tickRate = 0;
+int currentSecondPixel = 0;
+int currentMinutePixel = 0;
+
 const String WeekDays[8] = { " ", "Mon", "Tues", "Wed", "Thrs", "Fri", "Sat", "Sun" };
 int hours, minutes, seconds, year, dayOfMonth;
 String dayOfWeek, month;
 ArduinoLEDMatrix matrix;
+const int screenWidth = 12;
+const int screenHeight = 8;
 
 int hor = 0;
 
 byte secondsON_OFF= 1;
 
 // All the numbers for a 7-segment display
-// byte Digits[5][30] =
-// {
-//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-//   { 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1 },
-//   { 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 },
-//   { 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1 },
-//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 }
-// };
 
 byte Digits[5][20] =
 {
-  { 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1 },
+  { 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1 },
   { 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1 },
   { 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1 },
   { 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1 },
@@ -34,7 +33,7 @@ byte Digits[5][20] =
 
 
 // The display on the Uno
-byte ScreenBuffer[8][12] =
+byte ScreenBuffer[screenHeight][screenWidth] =
 {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -70,7 +69,7 @@ void loop()
 
   if (currentTime.getSeconds() != currentSecond)
   {
-    outputTime(currentTime);
+    // outputTime(currentTime);
 
     secondsON_OFF? secondsON_OFF = 0 : secondsON_OFF = 1;
 
@@ -82,13 +81,89 @@ void loop()
     // ScreenBuffer[0][2] = secondsON_OFF;
     // ScreenBuffer[0][4] = secondsON_OFF;
     // currentTime.get
-    matrix.renderBitmap(ScreenBuffer, 8, 12);
 
     currentSecond = currentTime.getSeconds();
-    moveDot();
+    int unixTime = currentTime.getUnixTime();
+
+    tickRate = tick;
+    Serial.print("\n");
+    Serial.print("\n");
+    Serial.print(tick);
+    tick = 0;
+
+
+    // Map minute to width of screen
+    float minuteFloat = (float)screenWidth / 60 * currentSecond;
+    int minuteNearestPixel = floor(minuteFloat + 0.5);
+    // Serial.print("\n");
+    // Serial.print("\n");
+    // Serial.print("screenWidth: ");
+    // Serial.print(screenWidth);
+    // Serial.print("\n");
+
+    // Serial.print("screenWidth / 60: ");
+    // Serial.print((float)screenWidth / 60);
+    // Serial.print("\n");
+
+    // Serial.print("currentSecond: ");
+    // Serial.print(currentSecond);
+    // Serial.print("\n");
+
+    // Serial.print("Mapped second: ");
+    // Serial.print(minuteFloat);
+    // Serial.print("\n");
+
+    // Serial.print("Nearest pixel: ");
+    // Serial.print(minuteNearestPixel);
+    // Serial.print("\n");
+
+    // moveDot();
+
+    if (minuteNearestPixel != currentMinutePixel)
+    {
+      zeroRow(7);
+      ScreenBuffer[6][minuteNearestPixel] = 1;
+      matrix.renderBitmap(ScreenBuffer, 8, 12);
+      currentMinutePixel = minuteNearestPixel;
+    }
   }
 
+  if (tickRate > 0)
+  {
+    // Map second to width of screen
+    float secondFloat = (float)screenWidth / tickRate * tick;
+    int secondNearestPixel = floor(secondFloat + 0.5);
 
+    // Serial.print("\n");
+    // Serial.print("\n");
+
+    // Serial.print("screenWidth / tickRate: ");
+    // Serial.print((float)screenWidth / tickRate);
+    // Serial.print("\n");
+
+    // Serial.print("tick: ");
+    // Serial.print(tick);
+    // Serial.print("\n");
+
+    // Serial.print("Mapped second: ");
+    // Serial.print(secondFloat);
+    // Serial.print("\n");
+
+    // Serial.print("Nearest pixel: ");
+    // Serial.print(secondNearestPixel);
+    // Serial.print("\n");
+
+
+    if (secondNearestPixel != currentSecondPixel)
+    {
+      zeroRow(8);
+      ScreenBuffer[7][secondNearestPixel] = 1;
+      matrix.renderBitmap(ScreenBuffer, 8, 12);
+      currentSecondPixel = secondNearestPixel;
+    }
+  }
+
+  tick ++;
 }
     
 
@@ -113,10 +188,18 @@ void moveDot()
 
 }
 
-// void getCurrentTime(String timeStamp)
-// {
+void zeroRow(int rowNumber)
+{
+  if (rowNumber > screenHeight)
+  {
+    return;
+  }
 
-// }
+  for (int i = 0; i < screenWidth; i++)
+  {
+    ScreenBuffer[rowNumber - 1][i] = 0;
+  }
+}
 
 void getCurrentTime(String timeStamp, String* dayOfWeek, int* dayOfMonth, int* year,
                     String* month, int* hours, int *minutes, int* seconds)
@@ -160,23 +243,13 @@ Month convertToMonth(String month)
 //  Graphics
 void displayDigit(int d, int screen_x, int screen_y)
 {
-  // d = 4;
-  // for (int x = 0; x < 3; x++)
   for (int y = 0; y < 2; y++)
   {
-    // for (int y = 0; y < 5; y++)
     for (int x = 0; x < 5; x++)
     {
-      // Serial.print(y + screen_x);
-      // Serial.print(x - screen_y);
-      // Serial.print("\n");
       ScreenBuffer[x - screen_y][y + screen_x] = Digits[x][y + d * 2];
-      // ScreenBuffer[y - screen_x][x + screen_y] = Digits[x][y + d * 3];
     }
   }
-
-  // Insert out matrix with the dimentions
-  matrix.renderBitmap(ScreenBuffer, 8, 12);
 }
 
 void outputTime(RTCTime currentTime)
@@ -196,6 +269,7 @@ void outputTime(RTCTime currentTime)
     Serial.println(currentTime.getSeconds());
 }
 
+
 // byte Time[12][8] =
 // {
 //   { 0, 1, 1, 1, 1, 1, 1, 1 },
@@ -213,6 +287,15 @@ void outputTime(RTCTime currentTime)
 // };
 
 
+// Numbers
+// byte Digits[5][30] =
+// {
+//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1 },
+//   { 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1 },
+//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 }
+// };
 
 // byte Digits[30][5] =
 // {
