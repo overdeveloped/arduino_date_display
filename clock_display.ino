@@ -3,25 +3,38 @@
 #include "Arduino_LED_Matrix.h"
 
 int currentSecond;
+int epochFrame;
 const String WeekDays[8] = { " ", "Mon", "Tues", "Wed", "Thrs", "Fri", "Sat", "Sun" };
 int hours, minutes, seconds, year, dayOfMonth;
 String dayOfWeek, month;
 ArduinoLEDMatrix matrix;
 
+int hor = 0;
+
 byte secondsON_OFF= 1;
 
 // All the numbers for a 7-segment display
-byte Digits[5][30] =
+// byte Digits[5][30] =
+// {
+//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1 },
+//   { 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1 },
+//   { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 }
+// };
+
+byte Digits[5][20] =
 {
-  { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-  { 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1 },
-  { 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 },
-  { 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1 },
-  { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1 }
+  { 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1 },
+  { 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1 },
+  { 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1 },
+  { 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1 },
+  { 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1 }
 };
 
+
 // The display on the Uno
-byte Time[8][12] =
+byte ScreenBuffer[8][12] =
 {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -57,38 +70,48 @@ void loop()
 
   if (currentTime.getSeconds() != currentSecond)
   {
-    Serial.print(WeekDays[DayOfWeek2int(currentTime.getDayOfWeek(), false)]);
-    Serial.print(" ");
-    Serial.print(currentTime.getDayOfMonth());
-    Serial.print("-");
-    Serial.print(Month2int(currentTime.getMonth()));
-    Serial.print("-");
-    Serial.print(currentTime.getYear());
-    Serial.print(" ");
-    Serial.print(currentTime.getHour());
-    Serial.print(":");
-    Serial.print(currentTime.getMinutes());
-    Serial.print(":");
-    Serial.println(currentTime.getSeconds());
+    outputTime(currentTime);
 
     secondsON_OFF? secondsON_OFF = 0 : secondsON_OFF = 1;
 
     displayDigit((int)(currentTime.getHour() / 10), 0, 0);
-    displayDigit(currentTime.getHour() % 10, 4, 0);
-    displayDigit((int)(currentTime.getMinutes() / 10), 1, 6);
-    displayDigit(currentTime.getMinutes() % 10, 5, 6);
+    displayDigit(currentTime.getHour() % 10, 3, 0);
+    displayDigit((int)(currentTime.getMinutes() / 10), 6, 0);
+    displayDigit(currentTime.getMinutes() % 10, 9, 0);
 
-    Time[0][2] = secondsON_OFF;
-    Time[0][4] = secondsON_OFF;
+    // ScreenBuffer[0][2] = secondsON_OFF;
+    // ScreenBuffer[0][4] = secondsON_OFF;
+    // currentTime.get
+    matrix.renderBitmap(ScreenBuffer, 8, 12);
 
-    matrix.renderBitmap(Time, 8, 12);
-    
     currentSecond = currentTime.getSeconds();
+    moveDot();
   }
 
 
 }
     
+
+void moveDot()
+{
+  if (hor - 1 > -1)
+  {
+    ScreenBuffer[7][hor - 1] = 0;
+  }
+  else
+  {
+    ScreenBuffer[7][11] = 0;
+  }
+
+  ScreenBuffer[7][hor] = 1;
+
+  hor++;
+  if (hor > 11)
+  {
+    hor = 0;
+  }
+
+}
 
 // void getCurrentTime(String timeStamp)
 // {
@@ -135,18 +158,101 @@ Month convertToMonth(String month)
 }
 
 //  Graphics
-void displayDigit(int d, int s_x, int s_y)
+void displayDigit(int d, int screen_x, int screen_y)
 {
-  for (int y = 0; y < 3; y++)
+  // d = 4;
+  // for (int x = 0; x < 3; x++)
+  for (int y = 0; y < 2; y++)
   {
+    // for (int y = 0; y < 5; y++)
     for (int x = 0; x < 5; x++)
     {
-      Time[y + s_x][11 - x - s_y] = Digits[x][y + d * 3];
+      // Serial.print(y + screen_x);
+      // Serial.print(x - screen_y);
+      // Serial.print("\n");
+      ScreenBuffer[x - screen_y][y + screen_x] = Digits[x][y + d * 2];
+      // ScreenBuffer[y - screen_x][x + screen_y] = Digits[x][y + d * 3];
     }
   }
 
   // Insert out matrix with the dimentions
-  matrix.renderBitmap(Time, 8, 12);
+  matrix.renderBitmap(ScreenBuffer, 8, 12);
 }
 
+void outputTime(RTCTime currentTime)
+{
+    Serial.print(WeekDays[DayOfWeek2int(currentTime.getDayOfWeek(), false)]);
+    Serial.print(" ");
+    Serial.print(currentTime.getDayOfMonth());
+    Serial.print("-");
+    Serial.print(Month2int(currentTime.getMonth()));
+    Serial.print("-");
+    Serial.print(currentTime.getYear());
+    Serial.print(" ");
+    Serial.print(currentTime.getHour());
+    Serial.print(":");
+    Serial.print(currentTime.getMinutes());
+    Serial.print(":");
+    Serial.println(currentTime.getSeconds());
+}
 
+// byte Time[12][8] =
+// {
+//   { 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 0, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 },
+//   { 1, 1, 1, 1, 1, 1, 1, 1 }
+// };
+
+
+
+// byte Digits[30][5] =
+// {
+//   { 1, 1, 1, 1, 1 },
+//   { 1, 0, 0, 0, 1 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 0, 0, 0, 0, 0 },
+//   { 0, 0, 0, 0, 0 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 1, 1, 1, 0, 1 },
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 0, 1, 1, 1 },
+
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 0, 0, 1, 1, 1 },
+//   { 0, 0, 1, 0, 0 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 1, 0, 1, 1, 1 },
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 1, 1, 0, 1 },
+
+//   { 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 1, 1, 0, 1 },
+
+//   { 0, 0, 0, 0, 1 },
+//   { 0, 0, 0, 0, 1 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 1, 1, 1, 1, 1 },
+//   { 1, 0, 1, 0, 1 },
+//   { 1, 1, 1, 1, 1 },
+
+//   { 0, 0, 1, 1, 1 },
+//   { 0, 0, 1, 0, 1 },
+//   { 1, 1, 1, 1, 1 }
+// };
